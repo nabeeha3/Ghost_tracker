@@ -158,7 +158,7 @@ void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c)
 
                     //wait on the evidence semaphore
                     sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                    addEvidenceToRoom(ghost->currentRoom, evidenceType);
+                    //addEvidenceToRoom(ghost->currentRoom, evidenceType);
                     sem_post(&ghost->currentRoom->evidenceSemaphore);
 
                     l_ghostEvidence(evidenceType, ghost->currentRoom->name);
@@ -194,7 +194,7 @@ void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c)
 
                     //wait on the evidence semaphore
                     sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                    addEvidenceToRoom(ghost->currentRoom, evidenceType);
+                    //addEvidenceToRoom(ghost->currentRoom, evidenceType);
                     sem_post(&ghost->currentRoom->evidenceSemaphore);
 
                     l_ghostEvidence(evidenceType, ghost->currentRoom->name);
