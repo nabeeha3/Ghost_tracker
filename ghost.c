@@ -223,9 +223,9 @@ void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c)
                 if (nextRoom != NULL) 
                 {
                     //move to next room
-                    //ghost->room->ghostInRoom = NULL;
+                    ghost->currentRoom->ghostInRoom = NULL;
                     ghost->currentRoom = nextRoom;
-                    //nextRoom->ghostInRoom = ghost;
+                    ghost->currentRoom->ghostInRoom = ghost;
 
                     l_ghostMove(ghost->currentRoom->name);
                 }
