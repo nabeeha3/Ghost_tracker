@@ -41,6 +41,13 @@ typedef struct
     RoomNode*  next;
 } RoomNode;
 
+typedef struct {
+    Ghost*      ghost;
+    Hunter*     hunters[NUM_HUNTERS];
+    HouseType*  house;
+} GhostThreadArgs;
+
+
 typedef struct 
 {
     char             name[MAX_STR];
@@ -115,5 +122,4 @@ int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]);
 Evidence* getGhostEvidence(Ghost* ghost);
 void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd);
 Room* getRandomConnectedRoom(Room* room);
-void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c);
-
+void* runGhostThread(void* arg);
