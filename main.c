@@ -52,13 +52,21 @@ int main()
     l_ghostInit(ghost.ghostType, ghost.currentRoom);
     //freeRoomList(roomsExcludingVan);
 
+    //create ghost thread
+    GhostThreadArgs ghostThreadArgs;
+    ghostThreadArgs.ghost = &ghost;
+    for (int i = 0; i < NUM_HUNTERS; ++i) 
+    {
+        ghostThreadArgs.hunters[i] = &hunters[i];
+    }
+    ghostThreadArgs.house = &house;
+
+
     //1.5 create thread for ghost
     //create semaphore for the ghost
     sem_t ghostSemaphore;
     sem_init(&ghostSemaphore, 0, 1);
-
-    pthread_create(&ghostThread, NULL, NULL, NULL);
-
+    pthread_create(&ghostThread, NULL, runGhostThread, (void*)&ghostThreadArgs);
 
     return 0;
 }
