@@ -178,11 +178,17 @@ Room* getRandomConnectedRoom(Room* room)
 }
 
 //ghost thread 
-void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c) 
+void* runGhostThread(void* arg) 
 {
-    Ghost* ghost = a;
-    Hunter* hunters[NUM_HUNTERS] = b[NUM_HUNTERS];
-    HouseType* house = c;
+    GhostThreadArgs* threadArgs = (GhostThreadArgs*)arg;
+
+    //access ghost, hunters, and house
+    Ghost* ghost = threadArgs->ghost;
+    Hunter* hunters[NUM_HUNTERS];
+    for (int i = 0; i < NUM_HUNTERS; ++i) {
+        hunters[i] = &(threadArgs->hunters[i]);
+    }
+    HouseType* house = threadArgs->house;
 
     while (ghost->boredomTimer < BOREDOM_MAX) 
     {
@@ -222,7 +228,7 @@ void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c)
                 Room* nextRoom = getRandomConnectedRoom(ghost->currentRoom);
                 if (nextRoom != NULL) 
                 {
-                    //move to next room
+                    //move to next room, update ghost and room
                     ghost->currentRoom->ghostInRoom = NULL;
                     ghost->currentRoom = nextRoom;
                     ghost->currentRoom->ghostInRoom = ghost;
