@@ -62,11 +62,13 @@ Room* getRoomByName(RoomNode* rooms, const char* targetName) {
     return NULL;
 }
 
-
 //function to check if the ghost is in the same room as a hunter
-int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunter) 
+int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]) 
 {
-    return (ghost->currentRoom == hunter->currentRoom);
+    for (int i = 0; i < NUM_HUNTERS; ++i) 
+    {
+    return (ghost->currentRoom == hunters[i]->currentRoom);
+    }
 }
 
 //ghost thread 
@@ -76,73 +78,71 @@ void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c)
     Hunter* hunters[NUM_HUNTERS] = b[NUM_HUNTERS];
     HouseType* house = c;
 
-    for (int i = 0; i < NUM_HUNTERS; ++i) 
+    while (ghost->boredomTimer < BOREDOM_MAX) 
     {
-        while (ghost->boredomTimer < BOREDOM_MAX) 
+        //wait on the semaphore
+        sem_wait(&ghost->ghostSemaphore);
+
+        //check if ghost in room with a hunter
+        if (isGhostInSameRoomAsHunter(&ghost, &hunters)) 
         {
-            //wait on the semaphore
-            sem_wait(&ghost->ghostSemaphore);
+            ghost->boredomTimer = 0; 
 
-            //check if ghost in room with a hunter
-            if (isGhostInSameRoomAsHunter(&ghost, &hunters[i])) 
+            //randomly choose to leave evidence or do nothing
+            if (randInt(0, 2) == 0) 
             {
-                ghost->boredomTimer = 0; 
+                enum EvidenceType evidenceType = randomGhostEvidenceType();
 
-                //randomly choose to leave evidence or do nothing
-                if (randInt(0, 2) == 0) 
+                //wait on the evidence semaphore
+                sem_wait(&ghost->currentRoom->evidenceSemaphore);
+                //addEvidenceToRoom(ghost->currentRoom, evidenceType);
+                sem_post(&ghost->currentRoom->evidenceSemaphore);
+
+                l_ghostEvidence(evidenceType, ghost->currentRoom->name);
+            }
+        } 
+        else 
+        {
+            ghost->boredomTimer++; 
+            int action = randInt(0, 3);
+
+            if (action == 0) 
+            {
+                //do nothing
+            } 
+            else if (action == 1) 
+            {
+                //randomly choose to move to an adjacent room
+                Room* nextRoom = assignGhostRoom(ghost->currentRoom);
+                if (nextRoom != NULL) 
                 {
-                    enum EvidenceType evidenceType = randomGhostEvidenceType();
+                    //move to next room
+                    //ghost->room->ghostInRoom = NULL;
+                    ghost->currentRoom = nextRoom;
+                    //nextRoom->ghostInRoom = ghost;
 
-                    //wait on the evidence semaphore
-                    sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                    //addEvidenceToRoom(ghost->currentRoom, evidenceType);
-                    sem_post(&ghost->currentRoom->evidenceSemaphore);
-
-                    l_ghostEvidence(evidenceType, ghost->currentRoom->name);
+                    l_ghostMove(ghost->currentRoom->name);
                 }
             } 
-            else 
+            else if (action == 2) 
             {
-                ghost->boredomTimer++; 
-                int action = randInt(0, 3);
+                //randomly choose to leave evidence
+                enum EvidenceType evidenceType = randomGhostEvidenceType();
 
-                if (action == 0) 
-                {
-                    //do nothing
-                } 
-                else if (action == 1) 
-                {
-                    //randomly choose to move to an adjacent room
-                    Room* nextRoom = assignGhostRoom(ghost->currentRoom);
-                    if (nextRoom != NULL) 
-                    {
-                        //move to next room
-                        //ghost->room->ghostInRoom = NULL;
-                        ghost->currentRoom = nextRoom;
-                        //nextRoom->ghostInRoom = ghost;
+                //wait on the evidence semaphore
+                sem_wait(&ghost->currentRoom->evidenceSemaphore);
+                //addEvidenceToRoom(ghost->currentRoom, evidenceType);
+                sem_post(&ghost->currentRoom->evidenceSemaphore);
 
-                        l_ghostMove(ghost->currentRoom->name);
-                    }
-                } 
-                else if (action == 2) 
-                {
-                    //randomly choose to leave evidence
-                    enum EvidenceType evidenceType = randomGhostEvidenceType();
-
-                    //wait on the evidence semaphore
-                    sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                    //addEvidenceToRoom(ghost->currentRoom, evidenceType);
-                    sem_post(&ghost->currentRoom->evidenceSemaphore);
-
-                    l_ghostEvidence(evidenceType, ghost->currentRoom->name);
-                }
+                l_ghostEvidence(evidenceType, ghost->currentRoom->name);
             }
-            //post to the semaphore
-            sem_post(&ghost->ghostSemaphore);
-            //sleep for a short duration before the next iteration
-            usleep(GHOST_WAIT);
         }
+        //post to the semaphore
+        sem_post(&ghost->ghostSemaphore);
+        //sleep for a short duration before the next iteration
+        usleep(GHOST_WAIT);
     }
+
     //ghost exits due to boredom
     l_ghostExit(LOG_BORED);
     pthread_exit(NULL);
