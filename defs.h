@@ -29,7 +29,17 @@ enum LoggerDetails { LOG_FEAR, LOG_BORED, LOG_EVIDENCE, LOG_SUFFICIENT, LOG_INSU
 
 //make structures
 
-typedef struct RoomNode RoomNode;
+typedef struct 
+{
+    Evidence       evidence;
+    EvidenceNode*  next;
+} EvidenceNode;
+
+typedef struct
+{
+    Room*      room;
+    RoomNode*  next;
+} RoomNode;
 
 typedef struct 
 {
@@ -41,12 +51,6 @@ typedef struct
     sem_t            roomSemaphore;  
     sem_t            evidenceSemaphore; 
 } Room;
-
-struct RoomNode 
-{
-    Room*        room;
-    RoomNode*    next;
-};
 
 typedef struct 
 {
@@ -60,7 +64,6 @@ typedef struct
 typedef struct 
 {
     RoomNode*         rooms;
-    Room*             roomsInHouse;        
     Hunter*           huntersInHouse; 
     Evidence*         sharedEvidence;
     pthread_t         hunterThreads[NUM_HUNTERS]; 
@@ -80,16 +83,10 @@ typedef struct
 
 typedef struct 
 {
+    EvidenceNode*  evidenceToCollection;
     EvidenceType   evidenceLeftByGhost;
     sem_t          evidenceSemaphore;   
 } Evidence;
-
-typedef struct  
-{
-    Evidence*       evidence;
-    EvidenceNode*  next;
-} EvidenceNode;
-
 
 
 // Helper Utilies
@@ -115,7 +112,8 @@ RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom);
 Room* assignGhostRoom(RoomNode* rooms);
 Room* getRoomByName(RoomNode* rooms, const char* targetName);
 int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]);
-EvidenceType* getGhostEvidence(Ghost* ghost);
-void addGhostEvidenceToRoom(Ghost* ghost, Evidence* evidenceToAdd);
+Evidence* getGhostEvidence(Ghost* ghost);
+void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd);
+Room* getRandomConnectedRoom(Room* room);
 void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c);
 
