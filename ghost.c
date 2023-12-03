@@ -6,7 +6,6 @@
     in: rooms - the original list of rooms
     in: excludedRoom - the room to be excluded from the new list
 */
-
 RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom) 
 {
     RoomNode* newRoomList = NULL;
@@ -50,11 +49,14 @@ Room* assignGhostRoom(RoomNode* rooms)
 }
 
 //function to get a room by its name
-Room* getRoomByName(RoomNode* rooms, const char* targetName) {
+Room* getRoomByName(RoomNode* rooms, const char* targetName) 
+{
     RoomNode* currentRoomNode = rooms;
 
-    while (currentRoomNode != NULL) {
-        if (strcmp(currentRoomNode->room->name, targetName) == 0) {
+    while (currentRoomNode != NULL) 
+    {
+        if (strcmp(currentRoomNode->room->name, targetName) == 0) 
+        {
             return currentRoomNode->room;
         }
         currentRoomNode = currentRoomNode->next;
@@ -70,6 +72,42 @@ int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS])
     return (ghost->currentRoom == hunters[i]->currentRoom);
     }
 }
+
+//function to check what evidence types a specific ghost can leave
+EvidenceType* checkGhostEvidenceTypes(Ghost ghost)
+{
+    EvidenceType* typesOfEvidence = (EvidenceType*)malloc(GHOST_EVIDENCE * sizeof(EvidenceType));
+
+    switch(ghost.ghostType) {
+        case BANSHEE:
+            typesOfEvidence[0] = EMF;
+            typesOfEvidence[1] = TEMPERATURE;
+            typesOfEvidence[2] = SOUND;
+            break;
+        case BULLIES:
+            typesOfEvidence[0] = EMF;
+            typesOfEvidence[1] = FINGERPRINTS;
+            typesOfEvidence[2] = SOUND;
+            break;
+        case PHANTOM:
+            typesOfEvidence[0] = FINGERPRINTS;
+            typesOfEvidence[1] = TEMPERATURE;
+            typesOfEvidence[2] = SOUND;
+            break;
+        case POLTERGEIST:
+            typesOfEvidence[0] = EMF;
+            typesOfEvidence[1] = TEMPERATURE;
+            typesOfEvidence[2] = FINGERPRINTS;
+            break;
+        default:
+            typesOfEvidence[0] = EV_UNKNOWN;
+            typesOfEvidence[1] = EV_UNKNOWN;
+            typesOfEvidence[2] = EV_UNKNOWN;
+            break;
+    }
+}
+
+
 
 //ghost thread 
 void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c) 
