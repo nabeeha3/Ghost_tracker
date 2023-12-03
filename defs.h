@@ -16,6 +16,9 @@
 #define NUM_HUNTERS     4
 #define FEAR_MAX        10
 #define LOGGING         C_TRUE
+#define GHOST_EVIDENCE  3
+#define MAX_EVIDENCE    10
+
 
 typedef enum EvidenceType EvidenceType;
 typedef enum GhostClass GhostClass;
@@ -41,8 +44,8 @@ typedef struct
 
 struct RoomNode 
 {
-    Room* room;
-    RoomNode* next;
+    Room*        room;
+    RoomNode*    next;
 };
 
 typedef struct 
@@ -81,6 +84,13 @@ typedef struct
     sem_t          evidenceSemaphore;   
 } Evidence;
 
+typedef struct  
+{
+    Evidence*       evidence;
+    EvidenceNode*  next;
+} EvidenceNode;
+
+
 
 // Helper Utilies
 int randInt(int,int);        // Pseudo-random number generator function
@@ -103,5 +113,9 @@ void l_ghostExit(enum LoggerDetails reason);
 //helper functions
 RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom);
 Room* assignGhostRoom(RoomNode* rooms);
-int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunter);
-void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c) ;
+Room* getRoomByName(RoomNode* rooms, const char* targetName);
+int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]);
+EvidenceType* getGhostEvidence(Ghost* ghost);
+void addGhostEvidenceToRoom(Ghost* ghost, Evidence* evidenceToAdd);
+void* runGhostThread(Ghost* a, Hunter* b[NUM_HUNTERS], HouseType* c);
+
