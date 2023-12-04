@@ -41,8 +41,55 @@ struct Room* getRandomRoom(RoomNode* roomList) {
     return currentRoom->room;
 }
 
-void* ghostThread(void* arg) {
-    Ghost* ghost = (struct Ghost*)arg;
 
+void* ghostThread(void* arg) {
+    Ghost* ghost = (Ghost*)arg;
+
+    while (1) {
+        sem_wait(&ghost->ghostSemaphore);
+
+        // Check if the Ghost is in the room with a hunter
+        if (ghost->currentRoom->huntersInRoom != NULL) {
+            l_ghostMove(ghost->currentRoom->name);
+            l_ghostEvidence(EV_UNKNOWN, ghost->currentRoom->name); // Ghost is leaving evidence or doing nothing randomly
+            // Reset boredom timer to 0, and it cannot move
+            ghost->boredomTimer = 0;
+        } else {
+            // Not in the room with a hunter
+            l_ghostMove(ghost->currentRoom->name);
+
+            // Increase boredom counter by 1
+            ghost->boredomTimer++;
+
+            // Randomly choose to move, leave evidence, or do nothing
+            int action = randInt(0, 3);
+            if (action == 0) {
+                // Move to an adjacent room
+                struct Room* newRoom = getRandomAdjacentRoom(ghost->currentRoom);
+                if (newRoom != NULL) {
+                    moveGhostToRoom(ghost, newRoom);
+                    l_ghostMove(newRoom->name);
+                }
+            } else if (action == 1) {
+                // Leave evidence
+                EvidenceType evidenceType = getRandomEvidenceType();
+                l_ghostEvidence(evidenceType, ghost->currentRoom->name);
+                addEvidenceToRoom(&ghost->currentRoom->evidenceCollection, evidenceType);
+            }
+            // Do nothing if action is 2 (2/3 chance)
+        }
+
+        sem_post(&ghost->ghostSemaphore);
+
+        // If boredom counter reaches BOREDOM_MAX, exit the thread
+        if (ghost->boredomTimer >= BOREDOM_MAX) {
+            l_ghostExit(LOG_BORED);
+            pthread_exit(NULL);
+        }
+
+        // Sleep to simulate time passing
+        usleep(GHOST_WAIT);
+    }
+    // Shouldn't reach here
     pthread_exit(NULL);
 }
