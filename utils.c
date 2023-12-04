@@ -87,4 +87,3 @@ void ghostToString(enum GhostClass ghost, char* buffer) {
         
     }
 }
-
