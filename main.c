@@ -68,5 +68,7 @@ int main()
     sem_init(&ghostSemaphore, 0, 1);
     pthread_create(&ghostThread, NULL, runGhostThread, (void*)&ghostThreadArg);
 
+    pthread_join(ghostThread, NULL);
+
     return 0;
 }
