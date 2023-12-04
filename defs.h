@@ -57,15 +57,14 @@ struct RoomNode {
 
 struct GhostThreadArgs {
     Ghost* ghost;
-    Hunter* hunters[NUM_HUNTERS];
     HouseType* house;
 };
 
 struct Room {
     char name[MAX_STR];
     RoomNode* connectedRooms;
-    Evidence* evidenceCollection;
-    Hunter* huntersInRoom;
+    EvidenceNode* evidenceCollection;
+    Hunter* huntersInRoom[NUM_HUNTERS];
     Ghost* ghostInRoom;
     sem_t roomSemaphore;
     sem_t evidenceSemaphore;
@@ -83,19 +82,19 @@ struct Hunter {
     Room* currentRoom;
     EvidenceType equipmentType;
     char name[MAX_STR];
-    Evidence* sharedEvidenceCollection;
+    EvidenceNode* sharedEvidenceCollection;
     int fear;
     int boredom;
-    Hunter* next;
     pthread_t threadId;
     sem_t hunterSemaphore;
 };
 
 struct HouseType {
     RoomNode* rooms;
-    Hunter* huntersInHouse;
-    Evidence* sharedEvidence;
+    Hunter* huntersInHouse[NUM_HUNTERS];
+    EvidenceNode* sharedEvidence;
     pthread_t hunterThreads[NUM_HUNTERS];
+    Ghost* ghost;
 };
 
 
@@ -117,23 +116,21 @@ void l_ghostMove(char* room);
 void l_ghostEvidence(enum EvidenceType evidence, char* room);
 void l_ghostExit(enum LoggerDetails reason);
 
-//helper functions
+// Ghost.c functions
+void* ghostThread(void* arg);
+void initGhost(HouseType* house);
+Room* placeGhostRandomly(HouseType* house);
+Room* getRandomRoom(RoomNode* roomList);
+void leaveEvidence(HouseType* house);
 
-//ghost functiom
-RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom);
-Room* assignGhostRoom(RoomNode* rooms);
-Room* getRoomByName(RoomNode* rooms, const char* targetName);
-int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]);
-enum EvidenceType getGhostEvidence(Ghost* ghost);
-void addEvidenceToRoom(Room* room, enum EvidenceType evidenceToAdd);
-Room* getRandomConnectedRoom(Room* room);
-void* runGhostThread(void* arg);
+// Hunter.c functions
+void* hunterThread(void* arg);
+void initHunter(Hunter* newHunter, char* name, HouseType* house);
+enum EvidenceType randomEquipmentType();
 
-//house functiom
+// House.c functions
 void initHouse(struct HouseType* house);
 struct Room* createRoom(const char* name);
 void connectRooms(struct Room* room1, struct Room* room2);
 void addRoom(struct RoomNode** roomList, struct Room* room);
 void populateRooms(HouseType* house);
-
-//hunter functions
