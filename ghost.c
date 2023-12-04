@@ -1,103 +1,87 @@
 #include "defs.h"
 
 /*
-    Purpose: create a new list of rooms excluding a specified room.
+    Purpose: Initialize the ghost in the house
   Params:
-    in: rooms - the original list of rooms
-    in: excludedRoom - the room to be excluded from the new list
+    in/out: house - pointer to the HouseType structure containing ghost and house information
 */
-RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom) 
+void initGhost(HouseType* house) 
 {
-    RoomNode* newRoomList = NULL;
+    Ghost* ghost = house->ghost;
+    ghost->ghostType = randomGhost();
+    ghost->currentRoom = placeGhostRandomly(house);
+    ghost->boredomTimer = 0;
+    sem_init(&ghost->ghostSemaphore, 0, 1);
 
-    //traverse original list of rooms
-    RoomNode* currentRoom = rooms;
-    while (currentRoom != NULL) 
-    {
-        // check if the current room is not the room we don't want
-        if (currentRoom->room != excludedRoom) 
-        {
-            //create new node for room, add to new list
-            RoomNode* newNode = (RoomNode*)malloc(sizeof(RoomNode));
-            newNode->room = currentRoom->room;
-            newNode->next = newRoomList;
-            newRoomList = newNode;
-        }
-        currentRoom = currentRoom->next;
-    }
-    return newRoomList;
+    ghost->currentRoom->ghostInRoom = ghost;
+
+    l_ghostInit(ghost->ghostType, ghost->currentRoom->name);
 }
 
 /*
-    Purpose: assign a random room to the ghost from the provided list.
+    Purpose: Place the ghost in a random room, excluding the van
   Params:
-    in: rooms - the list of rooms to choose from
+    in: house - pointer to the HouseType structure containing room information
+  Returns:
+    out: Room* - pointer to the randomly selected room for the ghost
 */
-Room* assignGhostRoom(RoomNode* rooms) 
-{
-    int numRooms = NUM_ROOMS;
-    //random index to select a room
-    int randomIndex = randInt(0, numRooms);
+Room* placeGhostRandomly(HouseType* house) 
+{   
+    // Get a random room from the house
+    struct Room* randomRoom = getRandomRoom(house->rooms);
 
-    //find room at random index
-    RoomNode* currentRoom = rooms;
-    for (int i = 0; i < randomIndex; ++i) 
+    // If the randomly selected room is the van, get another random room
+    while (strcmp(randomRoom->name, "Van") == 0) 
+    {
+        randomRoom = getRandomRoom(house->rooms);
+    }
+
+    return randomRoom;
+}
+
+/*
+    Purpose: Get a random room from the list of rooms
+  Params:
+    in: roomList - pointer to the RoomNode structure containing the list of rooms
+  Returns:
+    out: Room* - pointer to the randomly selected room
+*/
+Room* getRandomRoom(RoomNode* roomList) 
+{
+    // Count the number of rooms in the list
+    int roomCount = 0;
+    RoomNode* currentRoom = roomList;
+    while (currentRoom != NULL) 
+    {
+        roomCount++;
+        currentRoom = currentRoom->next;
+    }
+
+    // Generate a random index within the range of available rooms
+    int randomIndex = randInt(0, roomCount);
+
+    // Traverse the list to the randomly selected room
+    currentRoom = roomList;
+    for (int i = 0; i < randomIndex; i++) 
     {
         currentRoom = currentRoom->next;
     }
+
+    // Return the randomly selected room
     return currentRoom->room;
 }
 
 /*
-    Purpose: get a room by its name
+    Purpose: Leave evidence in the current room based on the type of ghost.
   Params:
-    in: rooms - the list of rooms to search
-    in: targetName - the name of the room to retrieve
+    in/out: house - pointer to the HouseType structure containing ghost and room information
 */
-Room* getRoomByName(RoomNode* rooms, const char* targetName) 
-{
-    RoomNode* currentRoomNode = rooms;
-
-    while (currentRoomNode != NULL) 
-    {
-        if (strcmp(currentRoomNode->room->name, targetName) == 0) 
-        {
-            return currentRoomNode->room;
-        }
-        currentRoomNode = currentRoomNode->next;
-    }
-    return NULL;
-}
-
-/*
-    Purpose: check if ghost is in same room as any of the hunters
-  Params:
-    in: ghost - the ghost to check
-    in: hunters - an array of pointers to hunters
-*/
-int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]) 
-{
-    for (int i = 0; i < NUM_HUNTERS; ++i) 
-    {
-        if (ghost->currentRoom == hunters[i]->currentRoom)
-        {
-            return C_TRUE;
-        }
-    }
-    return C_FALSE;
-}
-
-/*
-    Purpose: determine types of evidence a specific ghost can leave and return a random piece of evidence
-  Params:
-    in: ghost - the ghost for which to determine evidence types
-*/
-enum EvidenceType getGhostEvidence(Ghost* ghost)
+void leaveEvidence(HouseType* house) 
 {
     EvidenceType* typesOfEvidence = (EvidenceType*)malloc(GHOST_EVIDENCE * sizeof(EvidenceType));
-    Evidence pieceOfEvidence;
+    Evidence evidence;
 
-    switch(ghost->ghostType) 
+    switch(house->ghost->ghostType) 
     {
         case BANSHEE:
             typesOfEvidence[0] = EMF;
@@ -118,7 +102,6 @@ enum EvidenceType getGhostEvidence(Ghost* ghost)
             typesOfEvidence[0] = EMF;
             typesOfEvidence[1] = TEMPERATURE;
             typesOfEvidence[2] = FINGERPRINTS;
-            break;
         default:
             for (int i = 0; i < GHOST_EVIDENCE; ++i) 
             {
@@ -128,166 +111,70 @@ enum EvidenceType getGhostEvidence(Ghost* ghost)
     }
 
     int evidenceType = randInt(0, GHOST_EVIDENCE);
+    evidence.evidenceLeftByGhost = typesOfEvidence[evidenceType];
+    sem_init(&evidence.evidenceSemaphore, 0, 1);
 
-    pieceOfEvidence.evidenceLeftByGhost = typesOfEvidence[evidenceType];
+    EvidenceNode* sharedEvidence = house->sharedEvidence;
+    EvidenceNode* roomEvidence = house->ghost->currentRoom->evidenceCollection;
 
-    return pieceOfEvidence.evidenceLeftByGhost;
+    EvidenceNode* newSharedNode = (EvidenceNode*)malloc(sizeof(EvidenceNode));
+    newSharedNode->evidence = evidence;
+    newSharedNode->next = sharedEvidence;
+    sharedEvidence = newSharedNode;
+
+    EvidenceNode* newRoomNode = (EvidenceNode*)malloc(sizeof(EvidenceNode));
+    newRoomNode->evidence = evidence;
+    newRoomNode->next = roomEvidence;
+    roomEvidence = newRoomNode;
+    
+    l_ghostEvidence(evidence.evidenceLeftByGhost, house->ghost->currentRoom->name);
 }
 
 /*
-    Purpose: add evidence to shared evidence list in a room
+    Purpose: Simulate the behavior of the ghost in the haunted house.
   Params:
-    in: room - the room to which evidence is added
-    in: evidenceToAdd - pointer to the evidence to add
+    in: arg - pointer to the HouseType structure containing ghost and house information
 */
-void addEvidenceToRoom(Room* room, enum EvidenceType evidenceToAdd) 
+void* ghostThread(void* arg) 
 {
+    HouseType* house = (HouseType*)arg;
+    Ghost* ghost = house->ghost;
 
-    EvidenceNode* newEvidenceNode = (EvidenceNode*)malloc(sizeof(EvidenceNode));
-
-    if (newEvidenceNode == NULL) 
+    while(ghost->boredomTimer < BOREDOM_MAX)
     {
-        perror("Nothing to add...");
-        exit(EXIT_FAILURE);
-    }
-
-    //assign evidence to new node
-    newEvidenceNode->evidence.evidenceLeftByGhost = evidenceToAdd;
-    newEvidenceNode->next = NULL;
-
-    sem_wait(&room->evidenceSemaphore);
-
-    //if shared evidence list is empty, set new node as the head
-    if (room->evidenceCollection == NULL) 
-    {
-        room->evidenceCollection->evidenceToCollection = newEvidenceNode;
-    } 
-    else 
-    {
-        //append the new node
-        EvidenceNode* currentEvidence = room->evidenceCollection->evidenceToCollection;
-        while (currentEvidence->next != NULL) 
-        {
-            currentEvidence = currentEvidence->next;
-        }
-        currentEvidence->next = newEvidenceNode;
-    }
-    sem_post(&room->evidenceSemaphore);
-}
-
-/*
-    Purpose: Get a randomly connected room from the provided room.
-  Params:
-    in: room - the room for which to get a connected room
-*/
-Room* getRandomConnectedRoom(Room* room) 
-{
-    RoomNode* connectedRooms = room->connectedRooms;
-
-    int numConnectedRooms = 0;
-    while (connectedRooms != NULL) 
-    {
-        numConnectedRooms++;
-        connectedRooms = connectedRooms->next;
-    }
-
-    if (numConnectedRooms == 0) 
-    {
-        return NULL;
-    }
-
-    int randomIndex = randInt(0, numConnectedRooms - 1);
-
-    connectedRooms = room->connectedRooms;
-    for (int i = 0; i < randomIndex; ++i) {
-        connectedRooms = connectedRooms->next;
-    }
-
-    return connectedRooms->room;
-}
-
-/*
-    Purpose: Run the thread for the ghost's behavior in the haunted house simulation.
-  Params:
-    in: arg - pointer to GhostThreadArgs structure containing ghost, hunters, and house information
-*/
-void* runGhostThread(void* arg) 
-{
-    GhostThreadArgs* threadArgs = (GhostThreadArgs*)arg;
-
-    //access ghost, hunters, and house
-    Ghost* ghost = threadArgs->ghost;
-    Hunter* hunters[NUM_HUNTERS];
-    for (int i = 0; i < NUM_HUNTERS; ++i) {
-        hunters[i] = (threadArgs->hunters[i]);
-    }
-    //HouseType* house = threadArgs->house;
-
-    while (ghost->boredomTimer < BOREDOM_MAX) 
-    {
-        //wait on the semaphore
         sem_wait(&ghost->ghostSemaphore);
 
-        //check if ghost in room with a hunter
-        if (isGhostInSameRoomAsHunter(ghost, hunters)) 
+        if(ghost->currentRoom->huntersInRoom[0] != NULL) 
         {
-            ghost->boredomTimer = 0; 
+            ghost->boredomTimer = 0;
+            int action = randInt(0, 2);
 
-            //randomly choose to leave evidence or do nothing
-            if (randInt(0, 2) == 0) 
+            if(action == 1) 
             {
-                enum EvidenceType evidenceLeftByGhost = getGhostEvidence(ghost);
-
-                //wait on the evidence semaphore
-                sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                addEvidenceToRoom(ghost->currentRoom, evidenceLeftByGhost);
-                sem_post(&ghost->currentRoom->evidenceSemaphore);
-
-                l_ghostEvidence(evidenceLeftByGhost, ghost->currentRoom->name);
+                leaveEvidence(house);
             }
-        } 
-        else 
-        {
-            ghost->boredomTimer++; 
+        } else {
+            ghost->boredomTimer++;
             int action = randInt(0, 3);
 
-            if (action == 0) 
+            if(action == 1) 
             {
-                //do nothing
+                leaveEvidence(house);
             } 
-            else if (action == 1) 
+            else if(action == 2)
             {
-                //randomly choose to move to a connected room
-                Room* nextRoom = getRandomConnectedRoom(ghost->currentRoom);
-                if (nextRoom != NULL) 
-                {
-                    //move to next room, update ghost and room
-                    ghost->currentRoom->ghostInRoom = NULL;
-                    ghost->currentRoom = nextRoom;
-                    ghost->currentRoom->ghostInRoom = ghost;
+                Room* newRoom = getRandomRoom(ghost->currentRoom->connectedRooms);
+                ghost->currentRoom->ghostInRoom = NULL;
+                ghost->currentRoom = newRoom;
+                ghost->currentRoom->ghostInRoom = ghost;
 
-                    l_ghostMove(ghost->currentRoom->name);
-                }
-            } 
-            else if (action == 2) 
-            {
-                enum EvidenceType evidenceLeftByGhost = getGhostEvidence(ghost);
-
-                //wait on the evidence semaphore
-                sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                addEvidenceToRoom(ghost->currentRoom, evidenceLeftByGhost);
-                sem_post(&ghost->currentRoom->evidenceSemaphore);
-
-                l_ghostEvidence(evidenceLeftByGhost, ghost->currentRoom->name);
+                l_ghostMove(ghost->currentRoom->name);
             }
         }
-        //post to the semaphore
         sem_post(&ghost->ghostSemaphore);
-        //sleep for a short duration before the next iteration
+        
         usleep(GHOST_WAIT);
     }
-
-    //ghost exits due to boredom
     l_ghostExit(LOG_BORED);
     pthread_exit(NULL);
 }
