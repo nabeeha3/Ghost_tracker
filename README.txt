@@ -18,6 +18,7 @@ Files included and their purposes:
 - logger.c: logging file, ensure major actions are recorded consistently
 - house.c: creates the 'house', connects and adds rooms
 - utils.c: converts some enum types to strings, has random generators
+- hunter.c: code relating to hunters; handles most hunter functions
 
 
 - Makefile: compilation
