@@ -58,24 +58,22 @@ void populateRooms(HouseType* house) {
 // Function to initialize the house
 void initHouse(struct HouseType* house) {
     house->rooms = NULL;
-    house->roomsInHouse = NULL;
     house->huntersInHouse = NULL;
     house->sharedEvidence = NULL;
-    sem_init(&house->evidenceSemaphore, 0, 1);
 }
 
 // Function to create a room
 struct Room* createRoom(const char* name) {
-    struct Room* newRoom = (struct Room*)malloc(sizeof(struct Room));
-    if (newRoom != NULL) {
-        strcpy(newRoom->name, name);
-        newRoom->connectedRooms = NULL;
-        newRoom->evidenceCollection = NULL;
-        newRoom->huntersInRoom = NULL;
-        newRoom->ghostInRoom = NULL;
-        sem_init(&newRoom->roomSemaphore, 0, 1);
-        sem_init(&newRoom->evidenceSemaphore, 0, 1);
-    }
+    Room* newRoom = (struct Room*)malloc(sizeof(struct Room));
+
+    strcpy(newRoom->name, name);
+    newRoom->connectedRooms = NULL;
+    newRoom->evidenceCollection = NULL;
+    newRoom->huntersInRoom = NULL;
+    newRoom->ghostInRoom = NULL;
+    sem_init(&newRoom->roomSemaphore, 0, 1);
+    sem_init(&newRoom->evidenceSemaphore, 0, 1);
+
     return newRoom;
 }
 
@@ -98,9 +96,8 @@ void connectRooms(struct Room* room1, struct Room* room2) {
 // Function to add a room to the house's room list
 void addRoom(struct RoomNode** roomList, struct Room* room) {
     RoomNode* newNode = (RoomNode*)malloc(sizeof(RoomNode));
-    if (newNode != NULL) {
-        newNode->room = room;
-        newNode->next = *roomList;
-        *roomList = newNode;
-    }
+
+    newNode->room = room;
+    newNode->next = *roomList;
+    *roomList = newNode;
 }
