@@ -18,14 +18,10 @@ Files included and their purposes:
 - logger.c: logging file, ensure major actions are recorded consistently
 - house.c: creates the 'house', connects and adds rooms
 - utils.c: converts some enum types to strings, has random generators
-- hunter.c: code relating to hunters; handles most hunter functions
-
-
-- Makefile: compilation
-
-
+- hunter.c: code relating to hunters; handles most hunter functions, the hunter thread
+- Makefile: compilation and cleaning
 
 Instructions for compiling the program: make main
 Instructions for running the program: ./main
 
-Instructions for how to use the program once it is running: N/A view the images printed in terminal
+Instructions for how to use the program once it is running: enter hunter names, observe
