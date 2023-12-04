@@ -86,6 +86,7 @@ struct Hunter {
     Evidence* sharedEvidenceCollection;
     int fear;
     int boredom;
+    Hunter* next;
     pthread_t threadId;
     sem_t hunterSemaphore;
 };
@@ -117,6 +118,8 @@ void l_ghostEvidence(enum EvidenceType evidence, char* room);
 void l_ghostExit(enum LoggerDetails reason);
 
 //helper functions
+
+//ghost functiom
 RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom);
 Room* assignGhostRoom(RoomNode* rooms);
 Room* getRoomByName(RoomNode* rooms, const char* targetName);
@@ -126,8 +129,11 @@ void addEvidenceToRoom(Room* room, enum EvidenceType evidenceToAdd);
 Room* getRandomConnectedRoom(Room* room);
 void* runGhostThread(void* arg);
 
+//house functiom
 void initHouse(struct HouseType* house);
 struct Room* createRoom(const char* name);
 void connectRooms(struct Room* room1, struct Room* room2);
 void addRoom(struct RoomNode** roomList, struct Room* room);
 void populateRooms(HouseType* house);
+
+//hunter functions
