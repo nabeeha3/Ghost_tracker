@@ -35,7 +35,7 @@ RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom)
 */
 Room* assignGhostRoom(RoomNode* rooms) 
 {
-    int numRooms = countRooms(rooms);
+    int numRooms = NUM_ROOMS;
     //random index to select a room
     int randomIndex = randInt(0, numRooms);
 
@@ -48,7 +48,12 @@ Room* assignGhostRoom(RoomNode* rooms)
     return currentRoom->room;
 }
 
-//function to get a room by its name
+/*
+    Purpose: get a room by its name
+  Params:
+    in: rooms - the list of rooms to search
+    in: targetName - the name of the room to retrieve
+*/
 Room* getRoomByName(RoomNode* rooms, const char* targetName) 
 {
     RoomNode* currentRoomNode = rooms;
@@ -64,17 +69,30 @@ Room* getRoomByName(RoomNode* rooms, const char* targetName)
     return NULL;
 }
 
-//function to check if the ghost is in the same room as a hunter
+/*
+    Purpose: check if ghost is in same room as any of the hunters
+  Params:
+    in: ghost - the ghost to check
+    in: hunters - an array of pointers to hunters
+*/
 int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]) 
 {
     for (int i = 0; i < NUM_HUNTERS; ++i) 
     {
-        return (ghost->currentRoom == hunters[i]->currentRoom);
+        if (ghost->currentRoom == hunters[i]->currentRoom)
+        {
+            return C_TRUE;
+        }
     }
+    return C_FALSE;
 }
 
-//function to check what evidence types a specific ghost can leave
-Evidence* getGhostEvidence(Ghost* ghost)
+/*
+    Purpose: determine types of evidence a specific ghost can leave and return a random piece of evidence
+  Params:
+    in: ghost - the ghost for which to determine evidence types
+*/
+enum EvidenceType getGhostEvidence(Ghost* ghost)
 {
     EvidenceType* typesOfEvidence = (EvidenceType*)malloc(GHOST_EVIDENCE * sizeof(EvidenceType));
     Evidence pieceOfEvidence;
@@ -111,11 +129,18 @@ Evidence* getGhostEvidence(Ghost* ghost)
 
     int evidenceType = randInt(0, GHOST_EVIDENCE);
 
-    return pieceOfEvidence.evidenceLeftByGhost = typesOfEvidence[evidenceType];
+    pieceOfEvidence.evidenceLeftByGhost = typesOfEvidence[evidenceType];
+
+    return pieceOfEvidence.evidenceLeftByGhost;
 }
 
-//function to add the evidence that each ghost leaves behind to shared evidence list
-void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd) 
+/*
+    Purpose: add evidence to shared evidence list in a room
+  Params:
+    in: room - the room to which evidence is added
+    in: evidenceToAdd - pointer to the evidence to add
+*/
+void addEvidenceToRoom(Room* room, enum EvidenceType evidenceToAdd) 
 {
 
     EvidenceNode* newEvidenceNode = (EvidenceNode*)malloc(sizeof(EvidenceNode));
@@ -127,7 +152,7 @@ void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd)
     }
 
     //assign evidence to new node
-    newEvidenceNode->evidence = *evidenceToAdd;
+    newEvidenceNode->evidence.evidenceLeftByGhost = evidenceToAdd;
     newEvidenceNode->next = NULL;
 
     sem_wait(&room->evidenceSemaphore);
@@ -135,12 +160,12 @@ void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd)
     //if shared evidence list is empty, set new node as the head
     if (room->evidenceCollection == NULL) 
     {
-        room->evidenceCollection = newEvidenceNode;
+        room->evidenceCollection->evidenceToCollection = newEvidenceNode;
     } 
     else 
     {
         //append the new node
-        EvidenceNode* currentEvidence = room->evidenceCollection;
+        EvidenceNode* currentEvidence = room->evidenceCollection->evidenceToCollection;
         while (currentEvidence->next != NULL) 
         {
             currentEvidence = currentEvidence->next;
@@ -150,7 +175,11 @@ void addEvidenceToRoom(Room* room, Evidence* evidenceToAdd)
     sem_post(&room->evidenceSemaphore);
 }
 
-//
+/*
+    Purpose: Get a randomly connected room from the provided room.
+  Params:
+    in: room - the room for which to get a connected room
+*/
 Room* getRandomConnectedRoom(Room* room) 
 {
     RoomNode* connectedRooms = room->connectedRooms;
@@ -177,7 +206,11 @@ Room* getRandomConnectedRoom(Room* room)
     return connectedRooms->room;
 }
 
-//ghost thread 
+/*
+    Purpose: Run the thread for the ghost's behavior in the haunted house simulation.
+  Params:
+    in: arg - pointer to GhostThreadArgs structure containing ghost, hunters, and house information
+*/
 void* runGhostThread(void* arg) 
 {
     GhostThreadArgs* threadArgs = (GhostThreadArgs*)arg;
@@ -186,9 +219,9 @@ void* runGhostThread(void* arg)
     Ghost* ghost = threadArgs->ghost;
     Hunter* hunters[NUM_HUNTERS];
     for (int i = 0; i < NUM_HUNTERS; ++i) {
-        hunters[i] = &(threadArgs->hunters[i]);
+        hunters[i] = (threadArgs->hunters[i]);
     }
-    HouseType* house = threadArgs->house;
+    //HouseType* house = threadArgs->house;
 
     while (ghost->boredomTimer < BOREDOM_MAX) 
     {
@@ -196,18 +229,18 @@ void* runGhostThread(void* arg)
         sem_wait(&ghost->ghostSemaphore);
 
         //check if ghost in room with a hunter
-        if (isGhostInSameRoomAsHunter(&ghost, &hunters)) 
+        if (isGhostInSameRoomAsHunter(ghost, hunters)) 
         {
             ghost->boredomTimer = 0; 
 
             //randomly choose to leave evidence or do nothing
             if (randInt(0, 2) == 0) 
             {
-                Evidence* evidenceLeftByGhost = getGhostEvidence(ghost);
+                enum EvidenceType evidenceLeftByGhost = getGhostEvidence(ghost);
 
                 //wait on the evidence semaphore
                 sem_wait(&ghost->currentRoom->evidenceSemaphore);
-                addEvidenceToRoom(ghost->currentRoom, &evidenceLeftByGhost);
+                addEvidenceToRoom(ghost->currentRoom, evidenceLeftByGhost);
                 sem_post(&ghost->currentRoom->evidenceSemaphore);
 
                 l_ghostEvidence(evidenceLeftByGhost, ghost->currentRoom->name);
@@ -238,7 +271,7 @@ void* runGhostThread(void* arg)
             } 
             else if (action == 2) 
             {
-                Evidence* evidenceLeftByGhost = getGhostEvidence(ghost);
+                enum EvidenceType evidenceLeftByGhost = getGhostEvidence(ghost);
 
                 //wait on the evidence semaphore
                 sem_wait(&ghost->currentRoom->evidenceSemaphore);
