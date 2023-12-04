@@ -87,3 +87,26 @@ void ghostToString(enum GhostClass ghost, char* buffer) {
         
     }
 }
+
+// Helper function to get a random room from the list
+Room* getRandomRoom(RoomNode* roomList) {
+    // Count the number of rooms in the list
+    int roomCount = 0;
+    RoomNode* currentRoom = roomList;
+    while (currentRoom != NULL) {
+        roomCount++;
+        currentRoom = currentRoom->next;
+    }
+
+    // Generate a random index within the range of available rooms
+    int randomIndex = randInt(0, roomCount);
+
+    // Traverse the list to the randomly selected room
+    currentRoom = roomList;
+    for (int i = 0; i < randomIndex; i++) {
+        currentRoom = currentRoom->next;
+    }
+
+    // Return the randomly selected room
+    return currentRoom->room;
+}

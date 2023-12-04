@@ -35,13 +35,16 @@ int main()
     // Initialize hunters and create hunter thread
     for(int i = 0; i < NUM_HUNTERS; ++i) {
         Hunter newHunter;
-        house.huntersInHouse[i] = &newHunter;
-        initHunter(&newHunter, hunterNames[i], &house);
+        initHunter(&newHunter, hunterNames[i], &house, i);
         pthread_create(&house.hunterThreads[i], NULL, hunterThread, (void*)&house);
     }
 
     pthread_create(&(ghost.threadId), NULL, ghostThread, (void*)&house);
 
+    for (int i = 0; i < NUM_HUNTERS; ++i) {
+        pthread_join(house.hunterThreads[i], NULL);
+    }
+    
     pthread_join(house.ghost->threadId, NULL);
 
     return 0;

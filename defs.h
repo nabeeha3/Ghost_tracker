@@ -15,6 +15,7 @@
 #define GHOST_WAIT      600
 #define NUM_HUNTERS     4
 #define FEAR_MAX        10
+#define FEAR_INCREMENT  1
 #define LOGGING         C_TRUE
 #define GHOST_EVIDENCE  3
 #define MAX_EVIDENCE    10
@@ -133,7 +134,7 @@ Room* getRandomRoom(RoomNode* roomList);
 
 // Hunter.c functions
 void* hunterThread(void* arg);
-void initHunter(Hunter* newHunter, char* name, HouseType* house);
+void initHunter(Hunter* newHunter, char* name, HouseType* house, int index);
 enum EvidenceType randomEquipmentType();
 
 // House.c functions

@@ -13,11 +13,6 @@ void initGhost(HouseType* house) {
     l_ghostInit(ghost->ghostType, ghost->currentRoom->name);
 }
 
-// Function to determine ghost's class
-enum GhostClass getRandomGhost() {
-    return (enum GhostClass) randInt(0, GHOST_COUNT);
-}
-
 // Place the ghost in a random room, not including the van
 Room* placeGhostRandomly(HouseType* house) {
     
@@ -31,29 +26,6 @@ Room* placeGhostRandomly(HouseType* house) {
     }
 
     return randomRoom;
-}
-
-// Helper function to get a random room from the list
-Room* getRandomRoom(RoomNode* roomList) {
-    // Count the number of rooms in the list
-    int roomCount = 0;
-    RoomNode* currentRoom = roomList;
-    while (currentRoom != NULL) {
-        roomCount++;
-        currentRoom = currentRoom->next;
-    }
-
-    // Generate a random index within the range of available rooms
-    int randomIndex = randInt(0, roomCount);
-
-    // Traverse the list to the randomly selected room
-    currentRoom = roomList;
-    for (int i = 0; i < randomIndex; i++) {
-        currentRoom = currentRoom->next;
-    }
-
-    // Return the randomly selected room
-    return currentRoom->room;
 }
 
 void leaveEvidence(HouseType* house) {
