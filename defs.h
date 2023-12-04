@@ -19,6 +19,8 @@
 #define GHOST_EVIDENCE  3
 #define MAX_EVIDENCE    10
 #define NUM_ROOMS       13
+#define FEAR_INCREMENT  1
+
 
 
 typedef enum EvidenceType EvidenceType;
@@ -124,9 +126,14 @@ Room* getRandomRoom(RoomNode* roomList);
 void leaveEvidence(HouseType* house);
 
 // Hunter.c functions
+// void* hunterThread(void* arg);
+// void initHunter(Hunter* newHunter, char* name, HouseType* house);
+// enum EvidenceType randomEquipmentType();
+
+void initHunter(Hunter* newHunter, char* name, HouseType* house, int index, EvidenceType equipmentType);
+enum EvidenceType randomEquipmentType(HouseType* house);
 void* hunterThread(void* arg);
-void initHunter(Hunter* newHunter, char* name, HouseType* house);
-enum EvidenceType randomEquipmentType();
+
 
 // House.c functions
 void initHouse(struct HouseType* house);
