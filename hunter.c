@@ -1,6 +1,16 @@
 
 #include "defs.h"
 
+/*
+    Purpose: Initialize a hunter in the haunted house.
+  Params:
+    in/out: newHunter - pointer to the Hunter structure to be initialized
+    in: name - pointer to the string containing the name of the hunter
+    in: house - pointer to the HouseType structure containing house information
+    in: index - index of the hunter in the array
+    in: equipment - type of evidence equipment carried by the hunter
+*/
+
 void initHunter(Hunter* newHunter, char* name, HouseType* house, int index, EvidenceType equipment) {
     newHunter->currentRoom = house->rooms->room;
     newHunter->equipmentType = equipment;
@@ -15,6 +25,12 @@ void initHunter(Hunter* newHunter, char* name, HouseType* house, int index, Evid
 
     l_hunterInit(newHunter->name, newHunter->equipmentType);
 }
+
+/*
+    Purpose: Simulate the behavior of a hunter in the haunted house.
+  Params:
+    in: arg - pointer to the HouseType structure containing house information
+*/
 
 void* hunterThread(void* arg) {
     HouseType* house = (HouseType*)arg;
