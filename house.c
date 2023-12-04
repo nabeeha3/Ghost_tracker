@@ -1,9 +1,10 @@
 #include "defs.h"
 
 /*
-    Dynamically allocates several rooms and populates the provided house.
+    Purpose: Dynamically allocates several rooms and populates the provided house.
     Note: You may modify this as long as room names and connections are maintained.
-        out: house - the house to populate with rooms. Assumes house has been initialized.
+  Params:
+    out: house - the house to populate with rooms. Assumes house has been initialized.
 */
 void populateRooms(HouseType* house) {
     // First, create each room
@@ -55,21 +56,29 @@ void populateRooms(HouseType* house) {
     addRoom(&house->rooms, utility_room);
 }
 
-// Function to initialize the house
+/*
+    Purpose: Initialize the house.
+  Params:
+    out: house - pointer to the HouseType structure to be initialized
+*/
 void initHouse(struct HouseType* house) {
     house->rooms = NULL;
-    house->huntersInHouse = NULL;
     house->sharedEvidence = NULL;
 }
 
-// Function to create a room
+/*
+    Purpose: Create a room with the given name.
+  Params:
+    in: name - the name of the room
+  Returns:
+    out: Room* - pointer to the created room
+*/
 struct Room* createRoom(const char* name) {
     Room* newRoom = (struct Room*)malloc(sizeof(struct Room));
 
     strcpy(newRoom->name, name);
     newRoom->connectedRooms = NULL;
     newRoom->evidenceCollection = NULL;
-    newRoom->huntersInRoom = NULL;
     newRoom->ghostInRoom = NULL;
     sem_init(&newRoom->roomSemaphore, 0, 1);
     sem_init(&newRoom->evidenceSemaphore, 0, 1);
@@ -77,7 +86,12 @@ struct Room* createRoom(const char* name) {
     return newRoom;
 }
 
-// Function to connect two rooms
+/*
+    Purpose: Connect two rooms by creating two-way connections between them.
+  Params:
+    in: room1 - pointer to the first room to be connected
+    in: room2 - pointer to the second room to be connected
+*/
 void connectRooms(struct Room* room1, struct Room* room2) {
     RoomNode* node1 = (RoomNode*)malloc(sizeof(RoomNode));
     RoomNode* node2 = (RoomNode*)malloc(sizeof(RoomNode));
@@ -93,7 +107,12 @@ void connectRooms(struct Room* room1, struct Room* room2) {
     }
 }
 
-// Function to add a room to the house's room list
+/*
+    Purpose: Add a room to the house's room list.
+  Params:
+    in: firstRoom - pointer to the pointer of the first room in the list
+    in: newRoom - pointer to the room to be added
+*/
 void addRoom(struct RoomNode** firstRoom, struct Room* newRoom) {
     RoomNode* newNode = (RoomNode*)malloc(sizeof(RoomNode));
 
