@@ -94,10 +94,16 @@ void connectRooms(struct Room* room1, struct Room* room2) {
 }
 
 // Function to add a room to the house's room list
-void addRoom(struct RoomNode** roomList, struct Room* room) {
+void addRoom(struct RoomNode** firstRoom, struct Room* newRoom) {
     RoomNode* newNode = (RoomNode*)malloc(sizeof(RoomNode));
 
-    newNode->room = room;
-    newNode->next = *roomList;
-    *roomList = newNode;
+    newNode->room = newRoom;
+    newNode->next = NULL;
+
+    if (*firstRoom == NULL) {
+        *firstRoom = newNode;
+    } else {
+        newNode->next = (*firstRoom)->next;
+        (*firstRoom)->next = newNode;
+    }
 }
