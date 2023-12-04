@@ -1,18 +1,10 @@
 #include "defs.h"
 
-/*
-    Purpose: Initialize a hunter with the provided parameters.
-    Params:
-        in/out: newHunter - pointer to the hunter structure to initialize.
-        in: name - the name of the hunter.
-        in: house - pointer to the house structure.
-*/
-
 void initHunter(Hunter* newHunter, char* name, HouseType* house) {
     newHunter->currentRoom = house->rooms->room;
     newHunter->equipmentType = randomEquipmentType();
     strcpy(newHunter->name, name);
-    newHunter->sharedEvidenceCollection = NULL;
+    newHunter->sharedEvidenceCollection = house->sharedEvidence;
     newHunter->fear = 0;
     newHunter->boredom = 0;
     sem_init(&newHunter->hunterSemaphore, 0, 1);
@@ -20,166 +12,9 @@ void initHunter(Hunter* newHunter, char* name, HouseType* house) {
     l_hunterInit(newHunter->name, newHunter->equipmentType);
 }
 
-/*
-    Purpose: Generate a random evidence type for a hunter's equipment.
-    Returns: A random evidence type.
-*/
 enum EvidenceType randomEquipmentType() {
     return (enum EvidenceType) randInt(0, EV_COUNT);
 }
-
-
-int isHunterInRoomWithGhost(Hunter* hunter, Ghost* ghost)
-{
-    if (hunter->currentRoom == ghost->currentRoom)
-    {
-        return C_TRUE;
-    }
-    return C_FALSE;
-}
-
-/*
-    Purpose: Get a randomly connected room from the provided room.
-  Params:
-    in: room - the room for which to get a connected room
-*/
-Room* getRandomConnectedRoom(Room* room) 
-{
-    RoomNode* connectedRooms = room->connectedRooms;
-
-    int numConnectedRooms = 0;
-    while (connectedRooms != NULL) 
-    {
-        numConnectedRooms++;
-        connectedRooms = connectedRooms->next;
-    }
-
-    if (numConnectedRooms == 0) 
-    {
-        return NULL;
-    }
-
-    int randomIndex = randInt(0, numConnectedRooms - 1);
-
-    connectedRooms = room->connectedRooms;
-    for (int i = 0; i < randomIndex; ++i) {
-        connectedRooms = connectedRooms->next;
-    }
-
-    return connectedRooms->room;
-}
-
-void hunterCollectsEvidence(Hunter* hunter)
-{
-    Room* currentRoom = hunter->currentRoom;
-
-    //this should technicallyy traverse the list of evidence in a room not just this
-    if (currentRoom->evidenceCollection->evidenceLeftByGhost == hunter->equipmentType)
-    {
-        //remove evidence .. obvs not done here, need to actually remove from list
-        currentRoom->evidenceCollection->evidenceLeftByGhost;
-        //supposedly.... should actually be adding the evidence to the list of shared evidence
-        hunter->sharedEvidenceCollection->evidenceToCollection = currentRoom->evidenceCollection->evidenceLeftByGhost;
-
-        l_hunterCollect(hunter, currentRoom->evidenceCollection->evidenceLeftByGhost, currentRoom);
-    }
-}
-
-void hunterMovesToDifferentRoom(Hunter* hunter)
-{
-    Room* currentRoom = hunter->currentRoom;
-    Room* newRoom = getRandomConnectedRoom(currentRoom);
-    hunter->currentRoom = newRoom;
-
-    //not supposed to be NULL as you can have more than one hunter in a room, should remove current hunter
-    currentRoom->huntersInRoom = NULL;
-    //shouldn't just be equal to hunter but rather adding the hunter to the list
-    newRoom->huntersInRoom = hunter;
-
-    l_ghostMove(newRoom);
-}
-
-void hunterReviewsEvidence(Hunter* hunter)
-{
-    //should be going through the list looking at all pieces 
-    hunter->sharedEvidenceCollection->evidenceToCollection;
-    //traverse through the list of evidence and if there are 3 distinct types of evidence left, exit
-
-    //l_hunterReview(hunter, result);
-}
-
-void hunterPossibleActions(Hunter* hunter)
-{
-    int decision = randInt(1,3);
-    
-    if (decision == 1) //collect evidence
-    {
-        hunterCollectsEvidence(&hunter);
-    }
-    else if (decision == 2) // move
-    {
-        hunterMovesToDifferentRoom(&hunter);
-    }
-    else //review evidencec
-    {
-        hunterReviewsEvidence(&hunter);
-    }
-}
-
-
-
-// the hunter function without threading or what not
-void* hunterFunction(Hunter hunter, Ghost ghost) 
-{
-    while (hunter.boredom <= BOREDOM_MAX && hunter.fear <= FEAR_MAX)
-    {
-        if (isHunterInRoomWithGhost)
-        {
-            hunter.fear += INCREASE_EMOTION;
-            hunter.boredom = 0;
-        }
-        else
-        {
-            hunter.boredom += INCREASE_EMOTION;
-        }
-        hunterPossibleActions(&hunter);
-    }
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // // Function to add a hunter to the given room's list of hunters
 // void addHunterToRoom(struct Hunter** hunterList, struct Hunter* newHunter) {
@@ -214,7 +49,7 @@ void* hunterFunction(Hunter hunter, Ghost ghost)
 // }
 
 void* hunterThread(void* arg){
-    
+
 }
 // void* hunterThread(void* arg) {
 //     struct Hunter* hunter = (struct Hunter*)arg;
