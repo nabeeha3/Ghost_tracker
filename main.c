@@ -35,13 +35,13 @@ int main()
         }
     }
 
-    // Initialize hunters and create hunter thread
-    for(int i = 0; i < NUM_HUNTERS; ++i) {
-        Hunter newHunter;
-        house.huntersInHouse[i] = &newHunter;
-        initHunter(&newHunter, hunterNames[i], &house);
+    for (int i = 0; i < NUM_HUNTERS; ++i) {
+        house.huntersInHouse[i] = (Hunter*)malloc(sizeof(Hunter));
+        house.huntersInHouse[i]->equipmentType = (EvidenceType)i;
+        initHunter(house.huntersInHouse[i], hunterNames[i], &house, i, house.huntersInHouse[i]->equipmentType);
         pthread_create(&house.hunterThreads[i], NULL, hunterThread, (void*)&house);
     }
+
 
     pthread_create(&(ghost.threadId), NULL, ghostThread, (void*)&house);
 
@@ -49,4 +49,5 @@ int main()
 
     return 0;
 }
+
 
