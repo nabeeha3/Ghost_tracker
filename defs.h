@@ -16,6 +16,10 @@
 #define NUM_HUNTERS     4
 #define FEAR_MAX        10
 #define LOGGING         C_TRUE
+#define GHOST_EVIDENCE  3
+#define MAX_EVIDENCE    10
+#define NUM_ROOMS       13
+
 
 typedef enum EvidenceType EvidenceType;
 typedef enum GhostClass GhostClass;
@@ -24,71 +28,74 @@ enum EvidenceType { EMF, TEMPERATURE, FINGERPRINTS, SOUND, EV_COUNT, EV_UNKNOWN 
 enum GhostClass { POLTERGEIST, BANSHEE, BULLIES, PHANTOM, GHOST_COUNT, GH_UNKNOWN };
 enum LoggerDetails { LOG_FEAR, LOG_BORED, LOG_EVIDENCE, LOG_SUFFICIENT, LOG_INSUFFICIENT, LOG_UNKNOWN };
 
-// Forward declarations
-struct Room;
-struct RoomNode;
-struct Evidence;
-struct EvidenceNode;
-struct Hunter;
-struct Ghost;
-struct HouseType;
+//make structures
 
-// Definitions of your structures
+typedef struct EvidenceNode EvidenceNode;
+typedef struct RoomNode RoomNode;
+typedef struct Room Room;
+typedef struct Ghost Ghost;
+typedef struct Hunter Hunter;
+typedef struct HouseType HouseType;
+typedef struct Evidence Evidence;
+typedef struct GhostThreadArgs GhostThreadArgs;
 
-typedef struct RoomNode {
-    struct Room* room;
-    struct RoomNode* next;
-} RoomNode;
+struct Evidence {
+    EvidenceNode* evidenceToCollection;
+    enum EvidenceType evidenceLeftByGhost;
+    sem_t evidenceSemaphore;
+};
 
-typedef struct Room {
+struct EvidenceNode {
+    Evidence evidence;
+    EvidenceNode* next;
+};
+
+struct RoomNode {
+    Room* room;
+    RoomNode* next;
+};
+
+struct GhostThreadArgs {
+    Ghost* ghost;
+    Hunter* hunters[NUM_HUNTERS];
+    HouseType* house;
+};
+
+struct Room {
     char name[MAX_STR];
-    struct RoomNode* connectedRooms;
-    struct EvidenceNode* evidenceCollection;
-    struct Hunter* huntersInRoom;
-    struct Ghost* ghostInRoom;
+    RoomNode* connectedRooms;
+    Evidence* evidenceCollection;
+    Hunter* huntersInRoom;
+    Ghost* ghostInRoom;
     sem_t roomSemaphore;
     sem_t evidenceSemaphore;
-} Room;
+};
 
-typedef struct EvidenceNode {
-    struct Evidence* evidence;
-    struct EvidenceNode* next;
-} EvidenceNode;
-
-typedef struct Evidence {
-    EvidenceType evidenceLeftByGhost;
-    sem_t evidenceSemaphore;
-} Evidence;
-
-typedef struct Hunter {
-    struct Room* currentRoom;
-    EvidenceType equipmentType;
-    char name[MAX_STR];
-    struct Evidence* sharedEvidenceCollection;
-    int fear;
-    int boredom;
-    pthread_t threadId;
-    sem_t hunterSemaphore;
-    struct Hunter* next;  // Pointer to the next hunter in the list
-} Hunter;
-
-typedef struct Ghost {
+struct Ghost {
     GhostClass ghostType;
     Room* currentRoom;
     int boredomTimer;
     pthread_t threadId;
     sem_t ghostSemaphore;
-} Ghost;
+};
 
-typedef struct HouseType {
+struct Hunter {
+    Room* currentRoom;
+    EvidenceType equipmentType;
+    char name[MAX_STR];
+    Evidence* sharedEvidenceCollection;
+    int fear;
+    int boredom;
+    pthread_t threadId;
+    sem_t hunterSemaphore;
+};
+
+struct HouseType {
     RoomNode* rooms;
-    struct Room* roomsInHouse;  // Changed from "Room* roomsInHouse" to "struct Room* roomsInHouse"
-    struct Hunter* huntersInHouse;  // Changed from "Hunter* huntersInHouse" to "struct Hunter* huntersInHouse"
-    struct Evidence* sharedEvidence;
-    Ghost* ghost;
+    Hunter* huntersInHouse;
+    Evidence* sharedEvidence;
     pthread_t hunterThreads[NUM_HUNTERS];
-    sem_t evidenceSemaphore;
-} HouseType;
+};
 
 
 // Helper Utilies
@@ -109,25 +116,29 @@ void l_ghostMove(char* room);
 void l_ghostEvidence(enum EvidenceType evidence, char* room);
 void l_ghostExit(enum LoggerDetails reason);
 
+//helper functions
+// RoomNode* createRoomListExcluding(RoomNode* rooms, Room* excludedRoom);
+// Room* assignGhostRoom(RoomNode* rooms);
+// Room* getRoomByName(RoomNode* rooms, const char* targetName);
+// int isGhostInSameRoomAsHunter(Ghost* ghost, Hunter* hunters[NUM_HUNTERS]);
+// enum EvidenceType getGhostEvidence(Ghost* ghost);
+// void addEvidenceToRoom(Room* room, enum EvidenceType evidenceToAdd);
+// Room* getRandomConnectedRoom(Room* room);
+
+// Ghost.c functions
+void* ghostThread(void* arg);
+void initGhost(Ghost* ghost, HouseType* house);
+Room* placeGhostRandomly(HouseType* house);
+Room* getRandomRoom(RoomNode* roomList);
+
+// Hunter.c functions
+void* hunterThread(void* arg);
+void initHunter(Hunter* newHunter, char* name, HouseType* house);
+enum EvidenceType randomEquipmentType();
+
 // House.c functions
 void initHouse(struct HouseType* house);
 struct Room* createRoom(const char* name);
 void connectRooms(struct Room* room1, struct Room* room2);
 void addRoom(struct RoomNode** roomList, struct Room* room);
-void populateRooms(struct HouseType* house);
-
-//Hunter.c functions
-void placeHuntersInVan(struct HouseType* house, char hunterNames[NUM_HUNTERS][MAX_STR]);
-enum EvidenceType randomEquipmentType();
-void* hunterThread(void* arg);
-void performHunterAction(Hunter* hunter, HouseType* house);
-void moveHunterToRandomRoom(Hunter* hunter, HouseType* house);
-void collectEvidence(Hunter* hunter, HouseType* house);
-void reviewEvidence(Hunter* hunter, HouseType* house);
-void exitHunterThread(Hunter* hunter, HouseType* house, enum LoggerDetails reason);
-void* hunterThread(void* arg);
-
-//Ghost.c functions
-void placeGhostRandomly(HouseType* house);
-struct Room* getRandomRoom(RoomNode* roomList);
-void* ghostThread(void* arg);
+void populateRooms(HouseType* house);

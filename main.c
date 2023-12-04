@@ -5,7 +5,18 @@ int main()
     // Initialize the random number generator
     srand(time(NULL));
 
-    // 1.1 Ask user for 4 hunter names
+    // Initialize house and populate rooms
+    HouseType house;
+    initHouse(&house);
+    populateRooms(&house);
+
+    // Initialize ghost and create ghost thread
+    Ghost ghost;
+    initGhost(&ghost, &house);
+    pthread_create(&(ghost.threadId), NULL, ghostThread, (void*)&ghost);
+
+
+    // Get hunter names
     char hunterNames[NUM_HUNTERS][MAX_STR];
 
     for (int i = 0; i < NUM_HUNTERS; ++i) {
@@ -21,20 +32,15 @@ int main()
         }
     }
 
-    // Create the house: You may change this, but it's here for demonstration purposes
-    // Note: This code will not compile until you have implemented the house functions and structures
-    HouseType house;
-    initHouse(&house);
-    populateRooms(&house);
+    // Initialize hunters and create hunter thread
+    Hunter hunters[NUM_HUNTERS];
 
-    placeHuntersInVan(&house, hunterNames);
-    placeGhostRandomly(&house);
-
-    for (int i = 0; i < NUM_HUNTERS; ++i) {
+    for(int i = 0; i < NUM_HUNTERS; ++i) {
+        Hunter newHunter;
+        hunters[i] = newHunter;
+        initHunter(&newHunter, hunterNames[i], &house);
         pthread_create(&house.hunterThreads[i], NULL, hunterThread, (void*) &house.huntersInHouse[i]);
     }
-
-    pthread_create(&house.ghost->threadId, NULL, ghostThread, (void*)&house.ghost);
 
     return 0;
 }
