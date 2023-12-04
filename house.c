@@ -58,7 +58,6 @@ void populateRooms(HouseType* house) {
 // Function to initialize the house
 void initHouse(struct HouseType* house) {
     house->rooms = NULL;
-    house->huntersInHouse = NULL;
     house->sharedEvidence = NULL;
 }
 
@@ -69,7 +68,6 @@ struct Room* createRoom(const char* name) {
     strcpy(newRoom->name, name);
     newRoom->connectedRooms = NULL;
     newRoom->evidenceCollection = NULL;
-    newRoom->huntersInRoom = NULL;
     newRoom->ghostInRoom = NULL;
     sem_init(&newRoom->roomSemaphore, 0, 1);
     sem_init(&newRoom->evidenceSemaphore, 0, 1);
