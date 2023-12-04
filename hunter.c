@@ -1,171 +1,105 @@
+
 #include "defs.h"
 
-void initHunter(Hunter* newHunter, char* name, HouseType* house) {
+void initHunter(Hunter* newHunter, char* name, HouseType* house, int index, EvidenceType equipment) {
     newHunter->currentRoom = house->rooms->room;
-    newHunter->equipmentType = randomEquipmentType();
+    newHunter->equipmentType = equipment;
     strcpy(newHunter->name, name);
     newHunter->sharedEvidenceCollection = house->sharedEvidence;
     newHunter->fear = 0;
     newHunter->boredom = 0;
     sem_init(&newHunter->hunterSemaphore, 0, 1);
 
+    house->rooms->room->huntersInRoom[index] = newHunter;
+    house->huntersInHouse[index] = newHunter;
+
     l_hunterInit(newHunter->name, newHunter->equipmentType);
 }
 
-enum EvidenceType randomEquipmentType() {
-    return (enum EvidenceType) randInt(0, EV_COUNT);
+void* hunterThread(void* arg) {
+    HouseType* house = (HouseType*)arg;
+    Ghost* ghost = house->ghost;
+
+    Hunter* hunter;
+    int index;
+    for(int i = 0; i < NUM_HUNTERS; ++i) {
+        if(pthread_self() == house->hunterThreads[i]){
+            hunter = house->huntersInHouse[i];
+            index = i;
+            break;
+        }
+    }
+
+    while(hunter->boredom < BOREDOM_MAX && hunter->fear < FEAR_MAX){
+        sem_wait(&hunter->hunterSemaphore);
+
+        if(strcmp(hunter->currentRoom->name, ghost->currentRoom->name) == 0) {
+            hunter->fear += FEAR_INCREMENT;
+            hunter->boredom = 0;
+        } else {
+            hunter->boredom++;
+        }
+
+        int action = randInt(0, 3);
+
+        if(action == 0) {
+            EvidenceNode* currentEvidence = hunter->currentRoom->evidenceCollection;
+            EvidenceNode* previousEvidence = NULL;
+
+            while(currentEvidence != NULL){
+                if(currentEvidence->evidence.evidenceLeftByGhost == hunter->equipmentType){
+                    if(previousEvidence != NULL){
+                        previousEvidence->next = currentEvidence->next;
+                        break;
+                    }
+                    currentEvidence->next = house->sharedEvidence;
+                    house->sharedEvidence = currentEvidence;
+
+                    previousEvidence = currentEvidence;
+                }
+            }
+        } else if(action == 1){
+            Room* newRoom = getRandomRoom(hunter->currentRoom->connectedRooms);
+            hunter->currentRoom->huntersInRoom[index] = NULL;
+            hunter->currentRoom = newRoom;
+            hunter->currentRoom->huntersInRoom[index] = hunter;
+
+            l_hunterMove(hunter->name, hunter->currentRoom->name);
+        } else {
+            EvidenceNode* sharedEvidence = hunter->sharedEvidenceCollection;
+
+            enum EvidenceType uniqueTypes[EV_COUNT];
+            int uniques = 0;
+
+            while(sharedEvidence != NULL){
+                enum EvidenceType evidenceTypeNumber = sharedEvidence->evidence.evidenceLeftByGhost;
+                if(uniqueTypes[evidenceTypeNumber] != evidenceTypeNumber){
+                    uniqueTypes[evidenceTypeNumber] == evidenceTypeNumber;
+                    uniques++;
+                }
+                if(uniques == 3){
+                    l_hunterExit(hunter->name, LOG_SUFFICIENT);
+                    for(int i = 0; i < NUM_HUNTERS; ++i){
+                        pthread_cancel(house->hunterThreads[i]);
+                    }
+                    pthread_cancel(ghost->threadId);
+                    pthread_exit(NULL);
+                }
+                sharedEvidence = sharedEvidence->next;
+            }
+        }
+        sem_post(&hunter->hunterSemaphore);
+    
+        usleep(HUNTER_WAIT);
+
+    }
+
+    if(hunter->boredom >= BOREDOM_MAX) {
+        l_hunterExit(hunter->name, LOG_BORED);
+    } else {
+        l_hunterExit(hunter->name, LOG_FEAR);
+    }
+
+    pthread_exit(NULL);
 }
 
-// // Function to add a hunter to the given room's list of hunters
-// void addHunterToRoom(struct Hunter** hunterList, struct Hunter* newHunter) {
-//     newHunter->next = *hunterList;
-//     *hunterList = newHunter;
-// }
-
-// // Function to find a room in the house by name
-// struct Room* findRoomByName(struct RoomNode** roomList, const char* targetName) {
-//     struct RoomNode* currentRoomNode = *roomList;
-//     while (currentRoomNode != NULL) {
-//         if (strcmp(currentRoomNode->room->name, targetName) == 0) {
-//             return currentRoomNode->room;
-//         }
-//         currentRoomNode = currentRoomNode->next;
-//     }
-//     return NULL;  // Room not found
-// }
-
-// // Function to place hunters in the Van room
-// void placeHuntersInVan(struct HouseType* house, char hunterNames[NUM_HUNTERS][MAX_STR]) {
-//     // Access the Van room directly as it's the head of the room list
-//     struct Room* vanRoom = house->rooms;
-
-//     // Create and place hunters in the Van room
-//     for (int i = 0; i < NUM_HUNTERS; ++i) {
-//         struct Hunter* newHunter = createHunter(hunterNames[i], house);
-//         // Place the hunter in the head of the room's hunters list
-//         newHunter->next = vanRoom->huntersInRoom;
-//         vanRoom->huntersInRoom = newHunter;
-//     }
-// }
-
-void* hunterThread(void* arg){
-
-}
-// void* hunterThread(void* arg) {
-//     struct Hunter* hunter = (struct Hunter*)arg;
-
-//     while (1) {
-//         sem_wait(&hunter->hunterSemaphore);
-
-//         // Check if the hunter is in a room with a ghost
-//         if (hunter->currentRoom->ghostInRoom != NULL) {
-//             // Increase fear field by 1, reset boredom timer to 0
-//             hunter->fear++;
-//             hunter->boredom = 0;
-//         } else {
-//             // Not in the room with a ghost, increase boredom by 1
-//             hunter->boredom++;
-//         }
-
-//         // Randomly choose to collect evidence, move, or review evidence
-//         int action = randInt(0, 3);
-//         if (action == 0) {
-//             // Collect evidence
-//             collectEvidence(hunter);
-//         } else if (action == 1) {
-//             // Move to a random connected room
-//             moveHunterToRandomRoom(hunter);
-//         } else if (action == 2) {
-//             // Review evidence
-//             reviewEvidence(hunter);
-//         }
-
-//         // Check if fear is greater than or equal to FEAR_MAX, exit the thread
-//         if (hunter->fear >= FEAR_MAX) {
-//             l_hunterExit(hunter->name, LOG_FEAR);
-//             pthread_exit(NULL);
-//         }
-
-//         // Check if boredom is greater than or equal to BOREDOM_MAX, exit the thread
-//         if (hunter->boredom >= BOREDOM_MAX) {
-//             l_hunterExit(hunter->name, LOG_BORED);
-//             pthread_exit(NULL);
-//         }
-
-//         sem_post(&hunter->hunterSemaphore);
-
-//         // Sleep to simulate time passing
-//         usleep(HUNTER_WAIT);
-//     }
-//     // Shouldn't reach here
-//     pthread_exit(NULL);
-// }
-
-// // Function to move the hunter to a random connected room
-// void moveHunterToRandomRoom(struct Hunter* hunter) {
-//     sem_wait(&hunter->currentRoom->roomSemaphore);
-
-//     // Choose a random connected room
-//     struct RoomNode* connectedRoom = hunter->currentRoom->connectedRooms;
-//     int numConnectedRooms = countConnectedRooms(connectedRoom);
-
-//     if (numConnectedRooms > 0) {
-//         int randomIndex = randInt(0, numConnectedRooms);
-//         for (int i = 0; i < randomIndex; ++i) {
-//             connectedRoom = connectedRoom->next;
-//         }
-
-//         // Update room pointers
-//         hunter->currentRoom->huntersInRoom = removeHunterFromRoom(hunter->currentRoom->huntersInRoom, hunter);
-//         hunter->currentRoom = connectedRoom->room;
-//         addHunterToRoom(&hunter->currentRoom->huntersInRoom, hunter);
-
-//         // Log the hunter's movement
-//         l_hunterMove(hunter->name, hunter->currentRoom->name);
-//     }
-
-//     sem_post(&hunter->currentRoom->roomSemaphore);
-// }
-
-// // Function to review evidence for the hunter
-// void reviewEvidence(struct Hunter* hunter) {
-//     sem_wait(&hunter->hunterSemaphore);
-
-//     // Check if there is sufficient evidence to exit the simulation
-//     if (countUniqueEvidence(hunter->sharedEvidenceCollection) >= 3) {
-//         l_hunterReview(hunter->name, LOG_SUFFICIENT);
-//         l_hunterExit(hunter->name, LOG_EVIDENCE);
-//         pthread_exit(NULL);
-//     } else {
-//         l_hunterReview(hunter->name, LOG_INSUFFICIENT);
-//     }
-
-//     sem_post(&hunter->hunterSemaphore);
-// }
-
-// // Function to collect evidence for the hunter
-// void collectEvidence(struct Hunter* hunter) {
-//     sem_wait(&hunter->currentRoom->evidenceSemaphore);
-
-//     // Check each piece of evidence in the room's evidence collection
-//     struct EvidenceNode* evidenceNode = hunter->currentRoom->evidenceCollection;
-//     while (evidenceNode != NULL) {
-//         struct Evidence* evidence = evidenceNode->evidence;
-
-//         // Check if the hunter can detect this type of evidence
-//         if (hunterCanDetectEvidence(hunter, evidence->evidenceLeftByGhost)) {
-//             // Remove evidence from the room's collection
-//             hunter->currentRoom->evidenceCollection = removeEvidenceFromRoom(hunter->currentRoom->evidenceCollection, evidence);
-            
-//             // Add evidence to the hunter's shared evidence collection
-//             addEvidenceToHunter(&hunter->sharedEvidenceCollection, evidence);
-            
-//             // Log the hunter's collection
-//             l_hunterCollect(hunter->name, evidence->evidenceLeftByGhost, hunter->currentRoom->name);
-//         }
-
-//         evidenceNode = evidenceNode->next;
-//     }
-
-//     sem_post(&hunter->currentRoom->evidenceSemaphore);
-// }
